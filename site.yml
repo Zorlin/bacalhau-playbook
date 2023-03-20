@@ -12,7 +12,6 @@
 - name: Bacalhau clients
   hosts: bacalhau_client
   become: true
-  remote_user: root
 
   roles:
     - bacalhau
