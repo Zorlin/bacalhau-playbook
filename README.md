@@ -20,9 +20,9 @@ Copy your key to all the boxes you want to manage (replace localhost with the ma
 
 Edit the inventory file as appropriate. Copy vars/settings.yml.dist to vars/settings.yml and save a copy of your settings somewhere safe after editing them to suit your needs.
 
-Install the required roles, and do an Ansible run.
+Do an Ansible run.
 
-ansible-galaxy install -r roles/requirements.yml && ansible-playbook site.yml
+ansible-playbook site.yml
 
 Inventories
 ===========
