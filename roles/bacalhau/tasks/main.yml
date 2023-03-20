@@ -9,7 +9,7 @@
   ansible.builtin.set_fact:
     bacalhau_os: "{{ ansible_os_family }}"
   when: ansible_os_family == "Debian" or ansible_os_family == "MacOSX" # later or ansible_os_family == "RedHat" or ansible_os_family == "Suse" 
-  failed_when: false
+  failed_when: true
 
 # # verify we're running on a supported system
 # verifySupported
