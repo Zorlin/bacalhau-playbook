@@ -1,0 +1,18 @@
+---
+# - name: Gather special node facts
+#   hosts: all
+#   become: true
+#   gather_facts: false
+#   remote_user: root
+
+#   tasks:
+#     - name: Gather all facts
+#       ansible.builtin.setup:
+
+- name: Bacalhau clients
+  hosts: bacalhau_clients
+  become: true
+  remote_user: root
+
+  roles:
+    - zorlin.balcalhau
