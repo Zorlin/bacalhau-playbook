@@ -1,14 +1,4 @@
 ---
-# Bacalhau settings
-
-bacalhau_install_dir: /usr/local/bin
-use_sudo: true
-use_prereleases: false
-# BACALHAU_HTTP_REQUEST_CLI=curl - irrelevant to us
-bacalhau_org: bacalhau-project
-bacalhau_repo: bacalhau
-bacalhau_cli_filename: bacalhau
-bacalhau_public_key: 'TODO turn this into a key'
 
 # # figure out what we're running on and which arch - ansible will do this for us, we'll just assume we need sudo unless the user says false and uses a good path
 # # TODO report an early error if they're using the default /usr/local/bin path or /usr/bin and have use_sudo set to false to save them time.
