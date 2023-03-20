@@ -4,6 +4,8 @@ bacalhau-playbook
 
 Bacalhau on autopilot. Aims to make setting up, upgrading, maintaining and troubleshooting Bacalhau clients, nodes and clusters a breeze.
 
+Supports less systems than the original Bacalhau installer, we'll fix that over time. Quick 'n dirty for now.
+
 Getting started
 ===============
 
