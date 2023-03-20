@@ -4,6 +4,13 @@
 # # TODO report an early error if they're using the default /usr/local/bin path or /usr/bin and have use_sudo set to false to save them time.
 # #getSystemInfo
 
+# use ansible to detect whether we are on Linux or macOS, die if we are not on either separately, die if we are not on Ubuntu or Debian
+- name: use ansible to detect whether we are on Linux or macOS, die if we are not on either separately, die if we are not on Ubuntu or Debian
+  ansible.builtin.set_fact:
+    bacalhau_os: "{{ ansible_os_family }}"
+  when: ansible_os_family == "Debian" or ansible_os_family == "MacOSX" # later or ansible_os_family == "RedHat" or ansible_os_family == "Suse" 
+  failed_when: false
+
 # # verify we're running on a supported system
 # verifySupported
 

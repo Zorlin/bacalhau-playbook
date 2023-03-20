@@ -15,4 +15,4 @@
   remote_user: root
 
   roles:
-    - zorlin.balcalhau
+    - balcalhau
