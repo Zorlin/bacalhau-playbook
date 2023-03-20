@@ -1,5 +1,7 @@
 [bacalhau_client]
 inferno
+# my multipass node
+10.56.202.175
 
 [bacalhau_node]
 inferno

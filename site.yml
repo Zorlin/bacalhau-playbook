@@ -10,7 +10,7 @@
 #       ansible.builtin.setup:
 
 - name: Bacalhau clients
-  hosts: bacalhau_clients
+  hosts: bacalhau_client
   become: true
   remote_user: root
 
