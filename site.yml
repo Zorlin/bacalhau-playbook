@@ -13,5 +13,9 @@
   hosts: bacalhau_client
   become: true
 
+  vars_files:
+    - vars/settings.yml
+    - vars/sec.yml
+
   roles:
     - bacalhau

@@ -5,4 +5,3 @@ use_prereleases: false
 bacalhau_org: bacalhau-project
 bacalhau_repo: bacalhau
 bacalhau_cli_filename: bacalhau
-bacalhau_public_key: 'TODO turn this into a key'
