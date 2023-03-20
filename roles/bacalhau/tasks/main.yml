@@ -9,16 +9,32 @@
   ansible.builtin.set_fact:
     bacalhau_os: "{{ ansible_os_family }}"
   when: ansible_os_family == "Debian" or ansible_os_family == "MacOSX" # later or ansible_os_family == "RedHat" or ansible_os_family == "Suse" 
-  failed_when: true
+  failed_when: false
 
-# # verify we're running on a supported system
-# verifySupported
+- name: Poll the GitHub api to find the latest release of bacalhau and store it in a variable
+  uri:                                                               
+    url: https://api.github.com/repos/bacalhau-project/bacalhau/releases/latest
+    return_content: true                                             
+  register: json_reponse                                             
 
-# # check if bacalhau is already installed - we won't do this in Ansible since this playbook will be idempotent anyway so it's pointless
-# #checkExistingBacalhau
+- name: Set latest version number based on what we just fetched
+  ansible.builtin.set_fact:
+    bacalhau_version: "{{ json_reponse.json.tag_name }}"
 
-# # nope
-# #checkHttpRequestCLI
+- name: Debug - print bacalhau_version
+  debug:
+    msg: "{{ bacalhau_version }}"
+
+# todo add support for arm6(?) and arm64 too
+- name: Download the latest release of bacalhau to /tmp/ (MacOS)
+  ansible.builtin.get_url:
+    url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_darwin_amd64.tar.gz
+    dest: /tmp/bacalhau_{{ bacalhau_version }}_darwin_amd64.tar.gz
+
+- name: Download the latest release of bacalhau to /tmp/ (Linux)
+  ansible.builtin.get_url:
+    url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_linux_amd64.tar.gz
+    dest: /tmp/bacalhau_{{ bacalhau_version }}_linux_amd64.tar.gz
 
 # # get latest release
 # getLatestRelease
