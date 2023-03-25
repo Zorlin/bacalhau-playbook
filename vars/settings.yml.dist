@@ -1,7 +1,0 @@
-bacalhau_install_dir: /usr/local/bin
-use_sudo: true
-use_prereleases: false
-# BACALHAU_HTTP_REQUEST_CLI=curl - irrelevant to us
-bacalhau_org: bacalhau-project
-bacalhau_repo: bacalhau
-bacalhau_cli_filename: bacalhau
