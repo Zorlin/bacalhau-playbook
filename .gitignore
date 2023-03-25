@@ -1,5 +1,5 @@
 # macOS cruft
 **/*DS_Store*
 
-# keep settings out of git
-vars/settings.yml
+# keep overrides/custom settings out of git
+vars/overrides.yml
