@@ -21,10 +21,12 @@
     url: https://api.github.com/repos/bacalhau-project/bacalhau/releases/latest
     return_content: true                                             
   register: json_reponse                                             
+  when: bacalhau_version == 'latest'
 
 - name: Set latest version number based on what we just fetched
   ansible.builtin.set_fact:
     bacalhau_version: "{{ json_reponse.json.tag_name }}"
+  when: bacalhau_version == 'latest'
 
 # todo add support for arm6(?) and arm64 too
 - name: Download the latest release of bacalhau to /tmp/

@@ -24,6 +24,8 @@ Do an Ansible run.
 
 ansible-playbook site.yml
 
+(Currently this won't work, sorry - run bacalhau-client.yml if you want!)
+
 Inventories
 ===========
 Here are a list of included inventories.
