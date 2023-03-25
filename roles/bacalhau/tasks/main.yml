@@ -16,6 +16,20 @@
     bacalhau_os: "{{ 'linux' if bacalhau_os == 'Debian' else 'darwin' }}"
   when: bacalhau_os == "Debian" or bacalhau_os == "MacOSX"
 
+# Try running Bacalhau first, to see what version it is.
+- name: Check bacalhau version
+  shell: /usr/local/bin/bacalhau version
+  register: existing_bacalhau_version
+  ignore_errors: true
+  changed_when: false
+  no_log: true
+
+# Remove this later. It's just for debugging.
+# - name: Debug output bac version
+#   debug:
+#     msg: "{{ existing_bacalhau_version.stdout_lines[0].split(': ')[1] }}"
+#   when: existing_bacalhau_version.rc == 0
+
 - name: Poll the GitHub api to find the latest release of bacalhau and store it in a variable
   uri:                                                               
     url: https://api.github.com/repos/bacalhau-project/bacalhau/releases/latest
@@ -68,8 +82,10 @@
   ansible.builtin.unarchive:
     src: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz
     dest: "{{ bacalhau_install_dir }}"
-    creates: "{{ bacalhau_install_dir }}/bacalhau"
     remote_src: true
+  when:
+    # This conditional will only run if the bacalhau binary is not already installed or if the version installed does not match the version we want to install.
+    "(existing_bacalhau_version.stdout == '') or (existing_bacalhau_version.stdout_lines[0].split(': ')[1] != bacalhau_version)"
 
 - name: Ensure that the bacalhau binary is executable
   ansible.builtin.file:
