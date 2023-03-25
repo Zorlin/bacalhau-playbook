@@ -7,4 +7,4 @@
       debug:
         msg: "This playbook doesn't do anything yet."
       changed_when: false
-      failed_when: true
+      failed_when: false
