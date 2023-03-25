@@ -1,0 +1,10 @@
+---
+# This playbook doesn't actually do anything yet.
+# It's just a placeholder for future work.
+- hosts: all
+  tasks:
+    - name: "Print a friendly error message, but claim we succeeded."
+      debug:
+        msg: "This playbook doesn't do anything yet."
+      changed_when: false
+      failed_when: true
