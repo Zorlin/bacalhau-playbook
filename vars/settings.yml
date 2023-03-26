@@ -6,3 +6,5 @@ use_prereleases: false
 bacalhau_org: bacalhau-project
 bacalhau_repo: bacalhau
 bacalhau_cli_filename: bacalhau
+# Enable support for docker
+docker_enabled: true

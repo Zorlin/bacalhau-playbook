@@ -20,15 +20,22 @@
   roles:
     - kubo
     - role: geerlingguy.docker
-      when: docker_enabled and ansible_os_family not "Darwin"
+      when: docker_enabled and ansible_os_family not in "Darwin"
 
   tasks:
-    - name: Install Bacalhau as a service
-      ansible.builtin.template:
-        src: templates/bacalhau.service.j2
-        dest: /etc/systemd/system/bacalhau.service
-        owner: root
-        group: root
-        mode: "0644"
-      notify:
-        - Restart bacalhau
+    - name: Install and enable Bacalhau as a service (Linux)
+      when: ansible_os_family in "Debian"
+      block:
+        - name: "Install bacalhau systemd service"
+          ansible.builtin.template:
+            src: templates/bacalhau.service.j2
+            dest: /etc/systemd/system/bacalhau.service
+            owner: root
+            group: root
+            mode: "0644"
+
+        - name: Start and enable the Bacalhau daemon
+          ansible.builtin.service:
+            name: bacalhau
+            state: started
+            enabled: true

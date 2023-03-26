@@ -1,0 +1,16 @@
+# bacalhau systemd service unit file
+[Unit]
+Description=bacalhau, a Compute over Data framework for public, transparent, and optionally verifiable computation
+After=network.target
+
+[Service]
+Type=simple
+User=bacalhau
+Group=bacalhau
+EnvFile=/etc/default/bacalhau
+ExecStart={{ bacalhau_install_dir }}/bacalhau serve
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
