@@ -39,10 +39,12 @@
 
 # Compare the latest version of bacalhau with the version that is already installed, if any.
 - name: Install or update bacalhau
+  when:
+    "(existing_bacalhau_version.stdout == '') or (existing_bacalhau_version.stdout_lines[0].split(': ')[1] != bacalhau_version)"
   block:
     - name: Download the latest release of bacalhau to /tmp/
       ansible.builtin.get_url:
-        url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz
+        url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz # noqa yaml[line-length]
         dest: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz
         mode: "0644"
 
@@ -78,10 +80,8 @@
           changed_when: false
 
     - name: Install the bacalhau binary by extracting it to /usr/local/bin from the archive
-      ansible.builtin.command: 
-        cmd: tar -xzf /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz -C /usr/local/bin/ bacalhau
-  when: 
-    "(existing_bacalhau_version.stdout == '') or (existing_bacalhau_version.stdout_lines[0].split(': ')[1] != bacalhau_version)"
+      ansible.builtin.command:
+        cmd: tar -xzf /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz -C /usr/local/bin/ bacalhau # noqa command-instead-of-module yaml[line-length] no-changed-when
 
 - name: Ensure that the bacalhau binary is executable
   ansible.builtin.file:
