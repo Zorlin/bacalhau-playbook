@@ -14,13 +14,13 @@
     - name: Load in overrides if they exist
       ansible.builtin.include_vars:
         file: vars/overrides.yml
-        optional: true
         name: overrides
+      failed_when: false
 
   roles:
     - kubo
     - role: geerlingguy.docker
-      when: docker_enabled
+      when: docker_enabled and ansible_os_family not "Darwin"
 
   tasks:
     - name: Install Bacalhau as a service
