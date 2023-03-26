@@ -11,6 +11,7 @@
     - name: Load in overrides if they exist
       ansible.builtin.include_vars:
         file: vars/overrides.yml
+        optional: true
         name: overrides
 
   roles:

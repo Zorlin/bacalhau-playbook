@@ -39,3 +39,5 @@ Nothing yet, sorry
 Credits
 =======
 Developed in 2023 by [Benjamin Arntzen](https://github.com/Zorlin) and [Protocol Labs](https://protocol.ai) with assistance and kindness from the Bacalhau Project team and contributors. <3
+
+Uses portions of [ansible-ipfs](https://github.com/ipfs-search/ansible-ipfs) in the `kubo` role.
