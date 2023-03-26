@@ -1,0 +1,5 @@
+[bacalhau_client]
+192.168.64.5
+
+[bacalhau_node]
+192.168.64.5
