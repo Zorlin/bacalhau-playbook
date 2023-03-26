@@ -37,51 +37,50 @@
     bacalhau_version: "{{ json_reponse.json.tag_name }}"
   when: bacalhau_version == 'latest'
 
-# todo add support for arm6(?) and arm64 too
-- name: Download the latest release of bacalhau to /tmp/
-  ansible.builtin.get_url:
-    url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz
-    dest: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz
-    mode: "0644"
-
-- name: Download the corresponding sha256 hash to /tmp/
-  ansible.builtin.get_url:
-    url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256 # noqa yaml[line-length]
-    dest: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256
-    mode: "0644"
-
-- name: Decode the sha256 signature using openssl and save it with the same name
-  ansible.builtin.command:
-    cmd: openssl base64 -d -in /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256 -out /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256.decoded # noqa yaml[line-length]
-    creates: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256.decoded
-
-# do this all as a block task that only runs if gpg_validate is true
-- name: Validate the integrity of the downloaded tarball
+# Compare the latest version of bacalhau with the version that is already installed, if any.
+- name: Install or update bacalhau
   block:
-    - name: Create a temporary directory that we'll use to validate that the bacalhau binary is valid
-      ansible.builtin.tempfile:
-        state: directory
-      register: tempdir
-
-    - name: Write the bacalhau_public_key variable to a file
-      ansible.builtin.copy:
-        content: "{{ bacalhau_public_key }}"
-        dest: /tmp/bacalhau_public_key.pem
+    - name: Download the latest release of bacalhau to /tmp/
+      ansible.builtin.get_url:
+        url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz
+        dest: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz
         mode: "0644"
 
-    - name: Validate the tarball by checking it against the OpenSSL public key and signature.sha256 file
-      ansible.builtin.command:
-        cmd: openssl dgst -sha256 -verify /tmp/bacalhau_public_key.pem -signature /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256.decoded /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz # noqa yaml[line-length]
-      register: openssl_validation
-      changed_when: false
+    - name: Download the corresponding sha256 hash to /tmp/
+      ansible.builtin.get_url:
+        url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256 # noqa yaml[line-length]
+        dest: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256
+        mode: "0644"
 
-- name: Install the bacalhau binary by extracting it to /usr/local/bin from the archive
-  ansible.builtin.command:
-    src: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz
-    dest: "{{ bacalhau_install_dir }}"
-    remote_src: true
-  when:
-    # This conditional will only run if the bacalhau binary is not already installed or if the version installed does not match the version we want to install.
+    - name: Decode the sha256 signature using openssl and save it with the same name
+      ansible.builtin.command:
+        cmd: openssl base64 -d -in /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256 -out /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256.decoded # noqa yaml[line-length]
+        creates: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256.decoded
+
+    # do this all as a block task that only runs if gpg_validate is true
+    - name: Validate the integrity of the downloaded tarball
+      block:
+        - name: Create a temporary directory that we'll use to validate that the bacalhau binary is valid
+          ansible.builtin.tempfile:
+            state: directory
+          register: tempdir
+
+        - name: Write the bacalhau_public_key variable to a file
+          ansible.builtin.copy:
+            content: "{{ bacalhau_public_key }}"
+            dest: /tmp/bacalhau_public_key.pem
+            mode: "0644"
+
+        - name: Validate the tarball by checking it against the OpenSSL public key and signature.sha256 file
+          ansible.builtin.command:
+            cmd: openssl dgst -sha256 -verify /tmp/bacalhau_public_key.pem -signature /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz.signature.sha256.decoded /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz # noqa yaml[line-length]
+          register: openssl_validation
+          changed_when: false
+
+    - name: Install the bacalhau binary by extracting it to /usr/local/bin from the archive
+      ansible.builtin.command: 
+        cmd: tar -xzf /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_{{ bacalhau_arch }}.tar.gz -C /usr/local/bin/ bacalhau
+  when: 
     "(existing_bacalhau_version.stdout == '') or (existing_bacalhau_version.stdout_lines[0].split(': ')[1] != bacalhau_version)"
 
 - name: Ensure that the bacalhau binary is executable
@@ -91,7 +90,7 @@
 
 - name: Run a test command
   ansible.builtin.command:
-    cmd: bacalhau version
+    cmd: "{{ bacalhau_install_dir }}/bacalhau version"
   register: bacalhau_version_output
   changed_when: false
 
@@ -99,5 +98,5 @@
   ansible.builtin.debug:
     msg:
       - "Bacalhau was installed successfully."
-      - "To get started with BACALHAU, please visit https://github.com/{{ bacalhau_org }}/{{ bacalhau_repo }}!"
+      - "To get started with Bacalhau, please visit https://github.com/{{ bacalhau_org }}/{{ bacalhau_repo }}!"
   failed_when: not (bacalhau_version_output.rc == 0 and bacalhau_version in bacalhau_version_output.stdout)
