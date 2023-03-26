@@ -5,9 +5,13 @@
 
   vars_files:
     - vars/settings.yml
-    # Load in settings.yml again if we fail to find any overrides. This is silly but means we work whether or not the overrides file exists.
-    - [ "vars/overrides.yml", "vars/settings.yml" ]
     - vars/sec.yml
+
+  pre_tasks:
+    - name: Load in overrides if they exist
+      ansible.builtin.include_vars:
+        file: vars/overrides.yml
+        name: overrides
 
   roles:
     - bacalhau

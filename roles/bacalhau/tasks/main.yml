@@ -1,14 +1,9 @@
 ---
-
-# # figure out what we're running on and which arch - ansible will do this for us, we'll just assume we need sudo unless the user says false and uses a good path
-# # TODO report an early error if they're using the default /usr/local/bin path or /usr/bin and have use_sudo set to false to save them time.
-# #getSystemInfo
-
 # use ansible to detect whether we are on Linux or macOS, die if we are not on either separately, die if we are not on Ubuntu or Debian
-- name: use ansible to detect whether we are on Linux or macOS, die if we are not on either separately, die if we are not on Ubuntu or Debian
+- name: Detect whether we are on Linux or macOS, and safely exit if we are not.
   ansible.builtin.set_fact:
     bacalhau_os: "{{ ansible_os_family }}"
-  when: ansible_os_family == "Debian" or ansible_os_family == "MacOSX" # later or ansible_os_family == "RedHat" or ansible_os_family == "Suse" 
+  when: ansible_os_family == "Debian" or ansible_os_family == "MacOSX" # TODO: or ansible_os_family == "RedHat" or ansible_os_family == "Suse"
   failed_when: false
 
 - name: Cast bacalhau_os var into just "linux" or "darwin" - linux if it's Debian or darwin if it's MacOSX
@@ -18,23 +13,17 @@
 
 # Try running Bacalhau first, to see what version it is.
 - name: Check bacalhau version
-  shell: /usr/local/bin/bacalhau version
+  ansible.builtin.command: /usr/local/bin/bacalhau version
   register: existing_bacalhau_version
   ignore_errors: true
   changed_when: false
   no_log: true
 
-# Remove this later. It's just for debugging.
-# - name: Debug output bac version
-#   debug:
-#     msg: "{{ existing_bacalhau_version.stdout_lines[0].split(': ')[1] }}"
-#   when: existing_bacalhau_version.rc == 0
-
 - name: Poll the GitHub api to find the latest release of bacalhau and store it in a variable
-  uri:                                                               
+  ansible.builtin.uri:
     url: https://api.github.com/repos/bacalhau-project/bacalhau/releases/latest
-    return_content: true                                             
-  register: json_reponse                                             
+    return_content: true
+  register: json_reponse
   when: bacalhau_version == 'latest'
 
 - name: Set latest version number based on what we just fetched
@@ -47,36 +36,38 @@
   ansible.builtin.get_url:
     url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz
     dest: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz
+    mode: "0644"
 
 - name: Download the corresponding sha256 hash to /tmp/
   ansible.builtin.get_url:
-    url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256
+    url: https://github.com/bacalhau-project/bacalhau/releases/download/{{ bacalhau_version }}/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256 # noqa yaml[line-length]
     dest: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256
+    mode: "0644"
 
 - name: Decode the sha256 signature using openssl and save it with the same name
-  ansible.builtin.shell:
-    cmd: openssl base64 -d -in /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256 -out /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256.decoded
+  ansible.builtin.command:
+    cmd: openssl base64 -d -in /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256 -out /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256.decoded # noqa yaml[line-length]
+    creates: /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256.decoded
 
 # do this all as a block task that only runs if gpg_validate is true
 - name: Validate the integrity of the downloaded tarball
   block:
-  - name: Create a temporary directory that we'll use to validate that the bacalhau binary is valid
-    ansible.builtin.tempfile:
-      state: directory
-    register: tempdir
+    - name: Create a temporary directory that we'll use to validate that the bacalhau binary is valid
+      ansible.builtin.tempfile:
+        state: directory
+      register: tempdir
 
-  - name: Write the bacalhau_public_key variable to a file
-    ansible.builtin.copy:
-      content: "{{ bacalhau_public_key }}"
-      dest: /tmp/bacalhau_public_key.pem
-      mode: 0644
+    - name: Write the bacalhau_public_key variable to a file
+      ansible.builtin.copy:
+        content: "{{ bacalhau_public_key }}"
+        dest: /tmp/bacalhau_public_key.pem
+        mode: "0644"
 
-  - name: Validate the tarball by checking it against the OpenSSL public key and signature.sha256 file
-    ansible.builtin.shell:
-      cmd: |
-        openssl dgst -sha256 -verify /tmp/bacalhau_public_key.pem -signature /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256.decoded /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz
-    register: openssl_validation
-    changed_when: false
+    - name: Validate the tarball by checking it against the OpenSSL public key and signature.sha256 file
+      ansible.builtin.command:
+        cmd: openssl dgst -sha256 -verify /tmp/bacalhau_public_key.pem -signature /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz.signature.sha256.decoded /tmp/bacalhau_{{ bacalhau_version }}_{{ bacalhau_os }}_amd64.tar.gz # noqa yaml[line-length]
+      register: openssl_validation
+      changed_when: false
 
 - name: Install the bacalhau binary by extracting it to /usr/local/bin from the archive
   ansible.builtin.unarchive:
@@ -90,10 +81,10 @@
 - name: Ensure that the bacalhau binary is executable
   ansible.builtin.file:
     path: "{{ bacalhau_install_dir }}/bacalhau"
-    mode: 0755
+    mode: "0755"
 
 - name: Run a test command
-  ansible.builtin.shell:
+  ansible.builtin.command:
     cmd: bacalhau version
   register: bacalhau_version_output
   changed_when: false
