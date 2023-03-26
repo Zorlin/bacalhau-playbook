@@ -1,15 +1,19 @@
 ---
 # use ansible to detect whether we are on Linux or macOS, die if we are not on either separately, die if we are not on Ubuntu or Debian
+- name: print ansible_os_family
+  ansible.builtin.debug:
+    msg: "{{ ansible_os_family }}"
+
 - name: Detect whether we are on Linux or macOS, and safely exit if we are not.
   ansible.builtin.set_fact:
     bacalhau_os: "{{ ansible_os_family }}"
-  when: ansible_os_family == "Debian" or ansible_os_family == "MacOSX" # TODO: or ansible_os_family == "RedHat" or ansible_os_family == "Suse"
+  when: ansible_os_family == "Debian" or ansible_os_family == "Darwin" # TODO: or ansible_os_family == "RedHat" or ansible_os_family == "Suse"
   failed_when: false
 
 - name: Cast bacalhau_os var into just "linux" or "darwin" - linux if it's Debian or darwin if it's MacOSX
   ansible.builtin.set_fact:
     bacalhau_os: "{{ 'linux' if bacalhau_os == 'Debian' else 'darwin' }}"
-  when: bacalhau_os == "Debian" or bacalhau_os == "MacOSX"
+  when: bacalhau_os == "Debian" or bacalhau_os == "Darwin"
 
 # Try running Bacalhau first, to see what version it is.
 - name: Check bacalhau version
@@ -18,6 +22,7 @@
   ignore_errors: true
   changed_when: false
   no_log: true
+  check_mode: false
 
 - name: Poll the GitHub api to find the latest release of bacalhau and store it in a variable
   ansible.builtin.uri:
@@ -25,6 +30,7 @@
     return_content: true
   register: json_reponse
   when: bacalhau_version == 'latest'
+  check_mode: false
 
 - name: Set latest version number based on what we just fetched
   ansible.builtin.set_fact:
