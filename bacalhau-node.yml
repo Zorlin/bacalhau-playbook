@@ -1,0 +1,34 @@
+---
+- name: Run bacalhau-client.yml playbook
+  import_playbook: bacalhau-client.yml
+
+- name: Setup Bacalhau node deployment
+  hosts: bacalhau_node
+  become: true
+
+  vars_files:
+    - vars/settings.yml
+    - vars/sec.yml
+
+  pre_tasks:
+    - name: Load in overrides if they exist
+      ansible.builtin.include_vars:
+        file: vars/overrides.yml
+        optional: true
+        name: overrides
+
+  roles:
+    - kubo
+    - role: geerlingguy.docker
+      when: docker_enabled
+
+  tasks:
+    - name: Install Bacalhau as a service
+      ansible.builtin.template:
+        src: templates/bacalhau.service.j2
+        dest: /etc/systemd/system/bacalhau.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Restart bacalhau
