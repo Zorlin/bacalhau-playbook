@@ -8,7 +8,7 @@ bacalhau_repo: bacalhau
 bacalhau_cli_filename: bacalhau
 # Enable support for docker
 docker_enabled: true
-docker_apt_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' or 'arm64' else 'amd64' }}"
+docker_apt_arch: "{{ 'arm64' if ansible_architecture == ()'aarch64' or 'arm64')s else 'amd64' }}"
 # Enable support for ipfs
 ipfs_enabled: true
 ipfs_connect: "{{ ipfs_multiaddress | default('') }}"
