@@ -1,0 +1,9 @@
+---
+# Restart kubo
+- name: Restart kubo ipfs
+  ansible.builtin.systemd:
+    name: ipfs
+    state: restarted
+    daemon_reload: true
+ # TODO (feat): An extra safety suggested by Copilot
+ # when: kubo_binaries is changed or kubo_service is changed

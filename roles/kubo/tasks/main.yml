@@ -69,6 +69,7 @@
         mode: "0755"
         remote_src: true
       register: kubo_binaries
+      notify: Restart kubo ipfs
 
 - name: Create dedicated kubo/ipfs system group
   ansible.builtin.group:
@@ -92,6 +93,7 @@
     owner: "{{ ipfs_system_user }}"
     group: "{{ ipfs_system_group }}"
     mode: "0755"
+  notify: Restart kubo ipfs
 
 - name: Install kubo (IPFS) systemd service
   ansible.builtin.template:
