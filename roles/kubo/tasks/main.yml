@@ -71,6 +71,11 @@
       register: kubo_binaries
       notify: Restart kubo ipfs
 
+- name: Determine default shell for IPFS user
+  set_fact:
+    ipfs_shell: "{{ ipfs_shell | default('zsh' if ansible_system == 'Darwin' and ansible_distribution_version | version_compare('10.15', '>=') else 'bash') }}"
+  when: ipfs_shell is not defined or ipfs_shell == ''
+
 - name: Create dedicated kubo/ipfs system group
   ansible.builtin.group:
     name: "{{ ipfs_system_group }}"
@@ -82,8 +87,8 @@
     comment: "IPFS system user"
     home: "{{ ipfs_data_dir }}"
     group: "{{ ipfs_system_group }}"
-    # Prevent logging in as the ipfs user normally
-    shell: /bin/false
+    # Use the system's default shell
+    shell: {{ ipfs_shell }}
     system: true
 
 - name: Ensure kubo data directory exists and is owned by the ipfs_system_user
