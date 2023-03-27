@@ -2,6 +2,17 @@
 - name: Run bacalhau-client.yml playbook
   import_playbook: bacalhau-client.yml
 
+- name: Print a friendly message explaining that we've installed bacalhau, but can't run a node on macOS yet
+  ansible.builtin.debug:
+    msg: "Bacalhau has been installed, but you can't run a node on macOS yet. Please deploy on a Linux machine instead."
+  when: bacalhau_os == "Darwin"
+
+- name: Detect whether we are on Linux or macOS, and safely exit if we are not.
+  ansible.builtin.set_fact:
+    bacalhau_os: "{{ ansible_os_family }}"
+  when: ansible_os_family == "Debian"
+  failed_when: false
+
 - name: Setup Bacalhau node deployment
   hosts: bacalhau_node
   become: true
