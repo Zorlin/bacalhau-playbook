@@ -98,6 +98,21 @@
   register: bacalhau_version_output
   changed_when: false
 
+- name: Check if UFW is enabled
+  ansible.builtin.shell: |
+    ufw status | grep -w 'active' || true
+  register: ufw_enabled
+  changed_when: false
+  ignore_errors: true
+
+# Enable bacalhau and ipfs through the firewall
+- name: Allow incoming traffic on ports 1234, 1235 and 4001
+  ufw:
+    rule: allow
+    proto: tcp
+    port: from 1234 to 1235,4001
+  when: ufw_enabled.stdout == 'active'
+
 - name: Report that we installed Bacalhau successfully
   ansible.builtin.debug:
     msg:

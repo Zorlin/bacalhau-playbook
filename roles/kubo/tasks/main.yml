@@ -1,4 +1,13 @@
 ---
+- name: Install prerequisites
+  # acl package so we can change users as needed later
+  # jq for json stuff
+  ansible.builtin.package:
+    name:
+      - acl
+      - jq
+    state: present
+
 - name: Detect whether we are on Linux or macOS, and safely exit if we are not.
   ansible.builtin.set_fact:
     ipfs_os: "{{ ansible_os_family }}"
@@ -107,9 +116,38 @@
     mode: "0644"
   register: kubo_service
 
+- name: Check if IPFS repo is initialized
+  command: /usr/local/bin/ipfs repo stat
+  become: true
+  register: ipfs_repo_stat
+  ignore_errors: true
+  changed_when: false
+  # Run this as the kubo user
+  become_user: "{{ ipfs_system_user }}"
+
+- name: Initialize IPFS repo if not already initialized
+  command: /usr/local/bin/ipfs init
+  become: true
+  when: "'no IPFS repo found' in ipfs_repo_stat.stderr"
+  notify: Restart kubo ipfs
+  # Run this as the kubo user
+  become_user: "{{ ipfs_system_user }}"
+
 - name: Enable kubo (IPFS) systemd service
   ansible.builtin.systemd:
     name: ipfs
     enabled: true
     daemon_reload: true
     state: started
+
+- name: Extract IPFS multiaddress containing both tcp and 4001 and replace 4001 with 5001
+  shell: |
+    ipfs id | jq -r '.Addresses[] | select(test("^\\/ip4\\/127\\.0\\.0\\.1\\/tcp\\/4001\\/.*$")) | sub("4001"; "5001")'
+  register: ipfs_address
+  become_user: "{{ ipfs_system_user }}"
+  changed_when: false
+  failed_when: ipfs_address.stdout_lines | length != 1
+
+- name: Set fact for IPFS address
+  set_fact:
+    ipfs_multiaddress: "{{ ipfs_address.stdout }}"

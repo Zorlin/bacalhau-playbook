@@ -7,7 +7,7 @@ After=network.target
 Type=simple
 User=bacalhau
 Group=bacalhau
-Environment=/etc/default/bacalhau
+EnvironmentFile=/etc/default/bacalhau
 ExecStart={{ bacalhau_install_dir }}/bacalhau serve {% if ipfs_enabled|default(false) %}--ipfs-connect ${IPFS_CONNECT}{% endif %}
 
 Restart=always
