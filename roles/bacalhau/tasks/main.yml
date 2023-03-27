@@ -16,7 +16,7 @@
 
 - name: Cast ansible_architecture into just "arm64" or "amd64"
   ansible.builtin.set_fact:
-    bacalhau_arch: "{{ 'arm64' if ansible_architecture == 'arm64' or 'aarch64' else 'amd64' }}"
+    bacalhau_arch: "{{ 'arm64' if ansible_architecture == ('arm64' or 'aarch64') else 'amd64' }}"
   when: ansible_architecture == "aarch64" or ansible_architecture == "arm64" or ansible_architecture == "x86_64"
 
 # Try running Bacalhau first, to see what version it is.
