@@ -1,0 +1,7 @@
+---
+# Role defaults for kubo/ipfs
+ipfs_data_dir: "/var/lib/ipfs"
+ipfs_system_user: "ipfs"
+ipfs_system_group: "ipfs"
+# TODO (feat): Can we set ipfs_version here then override it elsewhere so that
+# we can have this role eventually spun out as more official Ansible tooling?

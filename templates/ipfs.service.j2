@@ -1,0 +1,15 @@
+[Unit]
+Description=IPFS Daemon
+After=network-online.target
+Wants=network-online.target systemd-networkd-wait-online.service
+
+[Service]
+User={{ ipfs_system_user }}
+Group={{ ipfs_system_group }}
+Environment="IPFS_PATH={{ ipfs_data_dir }}"
+Restart=always
+RestartSec=1s
+ExecStart=ipfs daemon
+
+[Install]
+WantedBy=multi-user.target

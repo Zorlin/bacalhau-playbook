@@ -10,4 +10,9 @@ bacalhau_cli_filename: bacalhau
 docker_enabled: true
 docker_apt_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' or 'arm64' else 'amd64' }}"
 # Enable support for ipfs
-ipfs_enabled: false
+ipfs_enabled: true
+ipfs_connect: TESTING
+ipfs_install_dir: /usr/local/bin
+ipfs_data_dir: ~/.ipfs
+ipfs_system_user: ipfs
+ipfs_system_group: ipfs

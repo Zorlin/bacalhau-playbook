@@ -17,6 +17,17 @@
         name: overrides
       failed_when: false
 
+    - name: Download latest production.tfvars to control machine
+      get_url:
+        url: "https://raw.githubusercontent.com/bacalhau-project/bacalhau/main/ops/terraform/production.tfvars"
+        dest: "/tmp/bacalhau.production.tfvars"
+      delegate_to: localhost
+      become: false
+
+    - name: Determine the correct Kubo (IPFS) version to install
+      set_fact:
+        ipfs_version: "{{ lookup('ini', 'ipfs_version type=properties file=' ~ '/tmp/bacalhau.production.tfvars') | replace('\"', '') }}"
+
   roles:
     - kubo
     - role: geerlingguy.docker
@@ -45,6 +56,14 @@
           ansible.builtin.template:
             src: templates/bacalhau.service.j2
             dest: /etc/systemd/system/bacalhau.service
+            owner: root
+            group: root
+            mode: "0644"
+
+        - name: Configure bacalhau service
+          ansible.builtin.template:
+            src: templates/bacalhau.j2
+            dest: /etc/default/bacalhau
             owner: root
             group: root
             mode: "0644"

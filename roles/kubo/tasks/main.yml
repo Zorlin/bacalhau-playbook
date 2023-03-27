@@ -1,2 +1,108 @@
 ---
-# noop for now
+- name: Detect whether we are on Linux or macOS, and safely exit if we are not.
+  ansible.builtin.set_fact:
+    ipfs_os: "{{ ansible_os_family }}"
+  when: ansible_os_family == "Debian" or ansible_os_family == "Darwin" # TODO: or ansible_os_family == "RedHat" or ansible_os_family == "Suse"
+  failed_when: false
+
+# Try running Kubo first, to see what version it is.
+- name: Check kubo (ipfs) version
+  ansible.builtin.command: /usr/local/bin/ipfs version
+  register: existing_kubo_version
+  ignore_errors: true
+  changed_when: false
+  no_log: true
+  check_mode: false
+
+- name: Print installed kubo version
+  ansible.builtin.debug:
+    msg: "Installed kubo version: {{ existing_kubo_version.stdout.split('ipfs version ')[1] }} vs {{ ipfs_version }}"
+  when: existing_kubo_version.stdout != ''
+
+# Compare the latest version of kubo with the version that is already installed, if any.
+- name: Install or update kubo (IPFS)
+  when:
+    "(existing_kubo_version.stdout == '') or (existing_kubo_version.stdout.split('ipfs version ')[1] not in ipfs_version)"
+  block:
+    - name: Cast ipfs_os into just "linux" or "darwin"
+      ansible.builtin.set_fact:
+        ipfs_os: "{{ 'linux' if ipfs_os == 'Debian' else 'darwin' }}"
+      when: ipfs_os == "Debian" or ipfs_os == "Darwin"
+
+    - name: Cast ansible_architecture into just "arm64" or "amd64"
+      ansible.builtin.set_fact:
+        ipfs_arch: "{{ 'arm64' if ansible_architecture == 'arm64' or 'aarch64' else 'amd64' }}"
+      when: ansible_architecture == "aarch64" or ansible_architecture == "arm64" or ansible_architecture == "x86_64"
+
+    - name: Create a tmpdir to hold the kubo tarball
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: kubo
+      register: tmpdir
+
+    - name: Download kubo tarball into the tmpdir
+      ansible.builtin.get_url:
+        # Watch out - in later versions go-ipfs in this path changes to kubo
+        url: "https://github.com/ipfs/kubo/releases/download/{{ ipfs_version }}/go-ipfs_{{ ipfs_version }}_{{ ipfs_os }}-{{ ipfs_arch }}.tar.gz"
+        dest: "{{ tmpdir.path }}/kubo_{{ ipfs_version }}_{{ ipfs_os }}-{{ ipfs_arch }}.tar.gz"
+        mode: "0755"
+      register: kubo_binaries
+      until: kubo_binaries is succeeded
+      retries: 5
+      delay: 2
+
+    - name: Extract the kubo tarball into the tmpdir
+      ansible.builtin.unarchive:
+        src: "{{ tmpdir.path }}/kubo_{{ ipfs_version }}_{{ ipfs_os }}-{{ ipfs_arch }}.tar.gz"
+        dest: "{{ tmpdir.path }}"
+        remote_src: true
+        mode: "0755"
+      register: kubo_binaries
+      until: kubo_binaries is succeeded
+      retries: 5
+      delay: 2
+
+    - name: Install the new kubo binary from the extracted tarball
+      ansible.builtin.copy:
+        src: "{{ tmpdir.path }}/go-ipfs/ipfs"
+        dest: /usr/local/bin/ipfs
+        mode: "0755"
+        remote_src: true
+      register: kubo_binaries
+
+- name: Create dedicated kubo/ipfs system group
+  ansible.builtin.group:
+    name: "{{ ipfs_system_group }}"
+    system: true
+
+- name: Create dedicated kubo/ipfs system user
+  ansible.builtin.user:
+    name: "{{ ipfs_system_user }}"
+    comment: "IPFS system user"
+    home: "{{ ipfs_data_dir }}"
+    group: "{{ ipfs_system_group }}"
+    # Prevent logging in as the ipfs user normally
+    shell: /bin/false
+    system: true
+
+- name: Ensure kubo data directory exists and is owned by the ipfs_system_user
+  ansible.builtin.file:
+    path: "{{ ipfs_data_dir }}"
+    state: directory
+    owner: "{{ ipfs_system_user }}"
+    group: "{{ ipfs_system_group }}"
+    mode: "0755"
+
+- name: Install kubo (IPFS) systemd service
+  ansible.builtin.template:
+    src: ipfs.service.j2
+    dest: /etc/systemd/system/ipfs.service
+    mode: "0644"
+  register: kubo_service
+
+- name: Enable kubo (IPFS) systemd service
+  ansible.builtin.systemd:
+    name: ipfs
+    enabled: true
+    daemon_reload: true
+    state: started
