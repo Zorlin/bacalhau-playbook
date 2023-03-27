@@ -71,10 +71,6 @@
       register: kubo_binaries
       notify: Restart kubo ipfs
 
-- name: Import version module
-  import_module:
-    name: ansible.utils.version
-
 - name: Determine default shell for IPFS user
   set_fact:
     ipfs_shell: "{{ ipfs_shell | default('zsh' if ansible_system == 'Darwin' and (ansible_distribution_major_version|int >= 10 and ansible_distribution_minor_version|int >= 15) else 'bash') }}"
