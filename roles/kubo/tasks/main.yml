@@ -88,7 +88,7 @@
     home: "{{ ipfs_data_dir }}"
     group: "{{ ipfs_system_group }}"
     # Use the system's default shell
-    shell: {{ ipfs_shell }}
+    shell: "{{ ipfs_shell }}"
     system: true
 
 - name: Ensure kubo data directory exists and is owned by the ipfs_system_user
