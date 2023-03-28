@@ -13,9 +13,10 @@
   roles:
     - cloud-deploy
 
-# - name: Deploy nodes to our freshly provisioned machines
-#   ansible.builtin.import_playbook: bacalhau-node.yml
+ - name: Deploy nodes to our freshly provisioned machines
+   ansible.builtin.import_playbook: bacalhau-node.yml
 
+  # Cleanup afterwards automatically
   tasks:
     - name: Retrieve Droplet Info
       ansible.builtin.uri:
@@ -59,17 +60,3 @@
       until: deletion_results.finished
       retries: 120
       delay: 10
-#     - name: Print list of tagged_droplets
-#       ansible.builtin.debug:
-#         msg: "{{ tagged_droplets }}"
-
-#     - name: PAUSE FOR INPUT
-#       ansible.builtin.pause:
-#         prompt: "Press enter to continue"
-
-#     - name: Delete droplets with the specific tag
-#       community.digitalocean.digital_ocean_droplet:
-#         api_token: "{{ do_api_token }}"
-#         state: absent
-#         id: "{{ item.id }}"
-#       loop: "{{ tagged_droplets.droplets }}"
