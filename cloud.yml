@@ -13,8 +13,8 @@
   roles:
     - cloud-deploy
 
- - name: Deploy nodes to our freshly provisioned machines
-   ansible.builtin.import_playbook: bacalhau-node.yml
+- name: Deploy nodes to our freshly provisioned machines
+  ansible.builtin.import_playbook: bacalhau-node.yml
 
   # Cleanup afterwards automatically
   tasks:
