@@ -1,0 +1,5 @@
+---
+# Node name template. Up to 100 machines can be created with this naming scheme.
+# If you need more, a) you can override this as needed b) talk to us because that
+# frankly sounds awesome.
+cloud_node_name_template: "{{ cloud_node_region }}-bacalhau-{:02d}"

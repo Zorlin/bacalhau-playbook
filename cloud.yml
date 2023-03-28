@@ -1,0 +1,11 @@
+---
+- name: Deploy to the cloud
+  hosts: 127.0.0.1
+  become: false
+
+  vars_files:
+    - vars/settings.yml
+    - vars/sec.yml
+
+  roles:
+    - cloud-deploy
