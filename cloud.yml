@@ -44,10 +44,6 @@
         return_content: yes
       register: droplet_info
 
-    - name: Display Droplet Information
-      debug:
-        var: droplet_info
-      
     - name: Extract a list of relevant droplet IDs
       set_fact:
         droplet_ids: "{{ droplet_info.json.droplets | map(attribute='id') | list }}"
@@ -56,7 +52,7 @@
       ansible.builtin.debug:
         msg: "{{ droplet_ids }}"
 
-    - name: Delete droplets with the specific tag 
+    - name: Delete droplets with the specific tag
       community.digitalocean.digital_ocean_droplet:
         id: "{{ item }}"
         state: absent
