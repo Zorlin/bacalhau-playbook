@@ -16,7 +16,6 @@
 - name: Deploy nodes to our freshly provisioned machines
   ansible.builtin.import_playbook: bacalhau-node.yml
 
----
 - name: Clean up and destroy Bacalhau clusters
   hosts: 127.0.0.1
   become: false
