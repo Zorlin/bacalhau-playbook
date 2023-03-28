@@ -68,51 +68,23 @@
   ansible.builtin.debug:
     var: droplet_completion.results
 
-- name: Collect IPv4 and IPv6 addresses
-  set_fact:
-    new_droplet_ips: "{{ new_droplet_ips|default([]) + [{'name': item.item.item, 'ipv4': item.data.droplet.networks.v4[1].ip_address, 'ipv6': item.data.droplet.networks.v6[0].ip_address}] }}"
-  with_items: "{{ droplet_completion.results }}"
-
-# - name: Wait for droplets to be created
-#   ansible.builtin.wait_for:
-#     timeout: 180
-#     for:
-#       - "droplet" in item.data
-#   with_items: "{{ new_server_info.results }}"
-#   register: wait_result
-#   failed_when: wait_result.results | rejectattr('item.data.droplet.status', 'equalto', 'active') | list | length > 0
-
-- name: Wait for droplets to be created
-  async_status:
-    jid: "{{ item.ansible_job_id }}"
-    mode: status
-    timeout: 180
-  with_items: "{{ new_server_info.results }}"
-  when: item.is_async
-
 - name: Group hosts by droplet IDs
   delegate_to: localhost
   run_once: true
+  no_log: true
   vars:
-    droplet_ids: "{{ new_server_info.results | map(attribute='data.droplet.id') | list }}"
+    droplet_ids: "{{ droplet_completion.results | map(attribute='data.droplet.id') | list }}"
   ansible.builtin.add_host:
-    name: "bacalhau{{ item }}"
-    ansible_host: "ipv{{ hostvars['localhost']['new_server_info']['results'][item]['item'] + 2 }}.bacalhau"
-    ansible_user: '{{ do_ssh_user }}'
-    ansible_port: '{{ do_ssh_port }}'
-    ansible_ssh_private_key_file: '{{ do_ssh_key }}'
-    droplet_id: "{{ hostvars['localhost']['new_server_info']['results'][item]['data']['droplet']['id'] }}"
-    groups: "droplet_ids_{{ hostvars['localhost']['new_server_info']['results'][item]['data']['droplet']['id'] }}"
-  with_sequence: start=0 end={{ new_server_info.results | length - 1 }}
-  when: "'droplet' in item"
-  async: 60
-  poll: 5
+    name: "{{ item.data.droplet.name }}"
+    ansible_host: "{{ item.data.droplet.networks.v4[0].ip_address }}"
+    droplet_id: "{{ item.data.droplet.id }}"
+    groups:
+      - "droplet_ids_{{ item.data.droplet.id }}"
+      - "bacalhau_nodes"
+  loop: "{{ droplet_completion.results }}"
   register: add_host_result
-  until: add_host_result is succeeded
-  retries: 5
-  delay: 10
 
 - name: Print list of all hosts and their ipv4 address
   ansible.builtin.debug:
     msg: "{{ hostvars[item]['ansible_host'] }} {{ item }}"
-  with_items: "{{ groups['all'] }}"
+  with_items: "{{ groups['all'] | difference(['localhost']) }}"
