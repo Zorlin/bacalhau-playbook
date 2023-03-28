@@ -34,6 +34,7 @@
         dest: "/tmp/bacalhau.production.tfvars"
       delegate_to: localhost
       become: false
+      run_once: true
 
     - name: Determine the correct Kubo (IPFS) version to install
       set_fact:

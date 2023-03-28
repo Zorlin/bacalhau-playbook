@@ -122,6 +122,7 @@
   register: ipfs_repo_stat
   ignore_errors: true
   changed_when: false
+  no_log: true
   # Run this as the kubo user
   become_user: "{{ ipfs_system_user }}"
 

@@ -50,8 +50,8 @@
   with_items: "{{ cloud_node_names }}"
   register: new_server_info
   changed_when: true
-  # Wait for up to 300 seconds for droplets, then fail
-  async: 300
+  # Wait for up to 900 seconds for droplets, then fail
+  async: 900
   # Fire and forget. We'll check the status later.
   poll: 0
 
@@ -62,7 +62,7 @@
   with_items: "{{ new_server_info.results }}"
   register: droplet_completion
   until: droplet_completion.finished
-  retries: 30
+  retries: 120
   delay: 10
 
 - name: Group hosts by droplet IDs
