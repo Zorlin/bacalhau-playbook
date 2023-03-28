@@ -52,7 +52,7 @@
   changed_when: true
   # Wait for up to 300 seconds for droplets, then fail
   async: 300
-  # Poll for updates as fast as possible.
+  # Fire and forget. We'll check the status later.
   poll: 0
 
 - name: Wait for the droplet creation to complete
@@ -87,17 +87,28 @@
     msg: "{{ hostvars[item]['ansible_host'] }} {{ item }}"
   with_items: "{{ groups['all'] | difference(['localhost']) }}"
 
-# TODO (feat): Parallelise this ssh-keyscan step
 - name: Collect the host keys using ssh-keyscan
   ansible.builtin.command: "ssh-keyscan {{ hostvars[item]['ansible_host'] }}"
   register: host_keys_result
   with_items: "{{ groups['bacalhau_node'] }}"
   changed_when: false
+  async: 120 # Set the maximum allowed runtime, in seconds
+  poll: 0 # Fire and forget, don't wait for the task to complete
+
+- name: Wait for all ssh-keyscan tasks to complete
+  ansible.builtin.async_status:
+    jid: "{{ item.ansible_job_id }}"
+  loop: "{{ host_keys_result.results }}"
+  when: item.ansible_job_id is not none
+  register: keyscan_results
+  until: keyscan_results.finished
+  retries: 30
+  delay: 5
 
 - name: Add the host keys to the known_hosts file
   ansible.builtin.known_hosts:
     name: "{{ hostvars[item]['ansible_host'] }}"
-    key: "{{ host_keys_result.results | map(attribute='stdout') | join('\n') }}"
+    key: "{{ keyscan_results.results | map(attribute='stdout') | join('\n') }}"
     path: "{{ lookup('env', 'HOME') }}/.ssh/known_hosts"
     state: present
   with_items: "{{ groups['bacalhau_node'] }}"

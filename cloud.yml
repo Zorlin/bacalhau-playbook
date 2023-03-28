@@ -7,24 +7,58 @@
     - vars/settings.yml
     - vars/sec.yml
 
+  vars:
+    - tag_name: bacalhau_bacboot
+
   roles:
     - cloud-deploy
 
-- name: Deploy nodes to our freshly provisioned machines
-  ansible.builtin.import_playbook: bacalhau-node.yml
+# - name: Deploy nodes to our freshly provisioned machines
+#   ansible.builtin.import_playbook: bacalhau-node.yml
 
-# - name: Tear down DigitalOcean droplets with a specific tag
-#   hosts: localhost
-#   gather_facts: no
-#   tasks:
-#     - name: Get all droplets with the specific tag
-#       community.digitalocean.digital_ocean_tag_info:
-#         api_token: "{{ do_api_token }}"
-#         tag_name: bacalhau_bacboot
-#       register: tagged_droplets
+  tasks:
+    - name: Retrieve Droplet Info
+      ansible.builtin.uri:
+        url: https://api.digitalocean.com/v2/droplets?tag_name={{ tag_name }}
+        method: GET
+        headers:
+          Authorization: "Bearer {{ do_api_token }}"
+          Content-Type: "application/json"
+        status_code: 200
+        return_content: yes
+      register: droplet_info
 
+    - name: Display Droplet Information
+      debug:
+        var: droplet_info
+      
+    - name: Extract a list of relevant droplet IDs
+      set_fact:
+        droplet_ids: "{{ droplet_info.json.droplets | map(attribute='id') | list }}"
 
+    - name: Print droplet_ids
+      ansible.builtin.debug:
+        msg: "{{ droplet_ids }}"
 
+    - name: Delete droplets with the specific tag 
+      community.digitalocean.digital_ocean_droplet:
+        id: "{{ item }}"
+        state: absent
+        api_token: "{{ do_api_token }}"
+      loop: "{{ droplet_ids }}"
+      async: 3600 # Set the maximum allowed runtime, in seconds
+      poll: 0 # Set polling frequency, 0 means "fire and forget"
+      register: deletion_jobs
+
+    - name: Wait for all deletion tasks to complete
+      ansible.builtin.async_status:
+        jid: "{{ item.ansible_job_id }}"
+      loop: "{{ deletion_jobs.results }}"
+      when: item.ansible_job_id is not none
+      register: deletion_results
+      until: deletion_results.finished
+      retries: 120
+      delay: 10
 #     - name: Print list of tagged_droplets
 #       ansible.builtin.debug:
 #         msg: "{{ tagged_droplets }}"
