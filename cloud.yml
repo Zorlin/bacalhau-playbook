@@ -18,6 +18,10 @@
 
   # Cleanup afterwards automatically
   tasks:
+    - name: Print droplet removal warning
+      ansible.builtin.pause:
+        prompt: "Droplets with the tag {{ tag_name }} will be removed after you press [ENTER]. If you want to keep the cluster just hit CTRL+C now."
+
     - name: Retrieve Droplet Info
       ansible.builtin.uri:
         url: https://api.digitalocean.com/v2/droplets?tag_name={{ tag_name }}
