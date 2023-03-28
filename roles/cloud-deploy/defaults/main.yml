@@ -2,4 +2,11 @@
 # Node name template. Up to 100 machines can be created with this naming scheme.
 # If you need more, a) you can override this as needed b) talk to us because that
 # frankly sounds awesome.
-cloud_node_name_template: "{{ cloud_node_region }}-bacalhau-{:02d}"
+# This will produce node names in the format of do-sfo2-bacalhau-01, do-sfo2-bacalhau-02, etc.
+cloud_node_name_template: "{{ cloud_provider }}-{{ cloud_node_region }}-bacalhau-%02d"
+# Alternate formats, feel free to try these instead:
+# cloud_node_name_template: "{{ cloud_provider }}-bacalhau-%02d" - do-bacalhau-01, do-bacalhau-02 etc
+# cloud_node_name_template: "bacalhau-%02d" - bacalhau-01, bacalhau-02 etc
+# cloud_node_name_template: "{{ cloud_node_region }}-bacalhau-%02d" - sfo2-bacalhau-01, sfo2-bacalhau-02 etc
+
+cloud_node_region: "{{ vars[cloud_provider + '_region'] }}"

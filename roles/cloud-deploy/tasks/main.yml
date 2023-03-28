@@ -1,13 +1,20 @@
 ---
 # Global tasks
-- name: Set region based on chosen cloud provider
-  ansible.builtin.set_fact:
-    cloud_node_region: "{{ vars[cloud_provider + '_region'] }}"
-
 - name: Generate cloud node names
   ansible.builtin.set_fact:
-    cloud_node_names: "{{ cloud_node_names | default([]) + [cloud_node_name_template | format(item)] }}"
-  with_sequence: start=1 end={{ cloud_instance_count }}
+    cloud_node_names: "{{ cloud_node_names | default([]) + [cloud_node_name_template | format(item | int)] }}"
+  with_sequence: start=1 end={{ cloud_instance_count | int }}
+
+- name: Print list of node names we are about to provision
+  ansible.builtin.debug:
+    msg:
+      - "We'll deploy the following nodes:"
+      - "{{ cloud_node_names }}"
+
+- name: Print ssh key
+  debug:
+    msg: "{{ public_ssh_key }}"
+  run_once: true
 
 # DigitalOcean specific for now...
 - name: Collect list of DigitalOcean public SSH keys
@@ -21,13 +28,9 @@
   delegate_to: 127.0.0.1
   ansible.builtin.set_fact:
     ssh_key_id_array: "[ '{{ item.id }}' ]"
-  when: item.public_key == public_ssh_key
+  when: item.public_key|trim == public_ssh_key|trim
   loop: "{{ ssh_keys.data | flatten ( levels=1 ) }}"
   run_once: true
-
-- name: DEBUG - print cloud node names
-  ansible.builtin.debug:
-    msg: "{{ cloud_node_names }}"
 
 - name: Spawn a new Digital Ocean Droplet for each node, collect the IPv4+IPv6 addresses
   delegate_to: 127.0.0.1
@@ -35,9 +38,9 @@
     state: present
     name: "{{ item }}"
     oauth_token: '{{ do_api_token }}'
-    size: '{{ slug_size }}'
+    size: '{{ do_size }}'
     ssh_keys: '{{ ssh_key_id_array }}'
-    region: '{{ do_droplet_region }}'
+    region: '{{ do_region }}'
     image: '{{ do_image }}'
     ipv6: true
     wait: true
@@ -45,3 +48,71 @@
     tags: "bacalhau_bacboot"
   with_items: "{{ cloud_node_names }}"
   register: new_server_info
+  changed_when: true
+  # Wait for up to 300 seconds for droplets, then fail
+  async: 300
+  # Poll for updates as fast as possible.
+  poll: 0
+
+- name: Wait for the droplet creation to complete
+  delegate_to: 127.0.0.1
+  ansible.builtin.async_status:
+    jid: "{{ item.ansible_job_id }}"
+  with_items: "{{ new_server_info.results }}"
+  register: droplet_completion
+  until: droplet_completion.finished
+  retries: 30
+  delay: 10
+
+- name: Debug droplet_completion results
+  ansible.builtin.debug:
+    var: droplet_completion.results
+
+- name: Collect IPv4 and IPv6 addresses
+  set_fact:
+    new_droplet_ips: "{{ new_droplet_ips|default([]) + [{'name': item.item.item, 'ipv4': item.data.droplet.networks.v4[1].ip_address, 'ipv6': item.data.droplet.networks.v6[0].ip_address}] }}"
+  with_items: "{{ droplet_completion.results }}"
+
+# - name: Wait for droplets to be created
+#   ansible.builtin.wait_for:
+#     timeout: 180
+#     for:
+#       - "droplet" in item.data
+#   with_items: "{{ new_server_info.results }}"
+#   register: wait_result
+#   failed_when: wait_result.results | rejectattr('item.data.droplet.status', 'equalto', 'active') | list | length > 0
+
+- name: Wait for droplets to be created
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+    mode: status
+    timeout: 180
+  with_items: "{{ new_server_info.results }}"
+  when: item.is_async
+
+- name: Group hosts by droplet IDs
+  delegate_to: localhost
+  run_once: true
+  vars:
+    droplet_ids: "{{ new_server_info.results | map(attribute='data.droplet.id') | list }}"
+  ansible.builtin.add_host:
+    name: "bacalhau{{ item }}"
+    ansible_host: "ipv{{ hostvars['localhost']['new_server_info']['results'][item]['item'] + 2 }}.bacalhau"
+    ansible_user: '{{ do_ssh_user }}'
+    ansible_port: '{{ do_ssh_port }}'
+    ansible_ssh_private_key_file: '{{ do_ssh_key }}'
+    droplet_id: "{{ hostvars['localhost']['new_server_info']['results'][item]['data']['droplet']['id'] }}"
+    groups: "droplet_ids_{{ hostvars['localhost']['new_server_info']['results'][item]['data']['droplet']['id'] }}"
+  with_sequence: start=0 end={{ new_server_info.results | length - 1 }}
+  when: "'droplet' in item"
+  async: 60
+  poll: 5
+  register: add_host_result
+  until: add_host_result is succeeded
+  retries: 5
+  delay: 10
+
+- name: Print list of all hosts and their ipv4 address
+  ansible.builtin.debug:
+    msg: "{{ hostvars[item]['ansible_host'] }} {{ item }}"
+  with_items: "{{ groups['all'] }}"
