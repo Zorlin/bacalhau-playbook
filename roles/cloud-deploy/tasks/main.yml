@@ -25,6 +25,7 @@
   run_once: true
 
 - name: Build an array with the correct SSH key ID
+  no_log: true
   delegate_to: 127.0.0.1
   ansible.builtin.set_fact:
     ssh_key_id_array: "[ '{{ item.id }}' ]"
@@ -64,10 +65,6 @@
   retries: 30
   delay: 10
 
-- name: Debug droplet_completion results
-  ansible.builtin.debug:
-    var: droplet_completion.results
-
 - name: Group hosts by droplet IDs
   delegate_to: localhost
   run_once: true
@@ -76,11 +73,12 @@
     droplet_ids: "{{ droplet_completion.results | map(attribute='data.droplet.id') | list }}"
   ansible.builtin.add_host:
     name: "{{ item.data.droplet.name }}"
-    ansible_host: "{{ item.data.droplet.networks.v4[0].ip_address }}"
+    ansible_host: "{{ (item.data.droplet.networks.v4 | selectattr('type', 'equalto', 'public') | list | first).ip_address }}"
     droplet_id: "{{ item.data.droplet.id }}"
     groups:
       - "droplet_ids_{{ item.data.droplet.id }}"
-      - "bacalhau_nodes"
+      - "bacalhau_node"
+      - "bacalhau_client"
   loop: "{{ droplet_completion.results }}"
   register: add_host_result
 
@@ -88,3 +86,18 @@
   ansible.builtin.debug:
     msg: "{{ hostvars[item]['ansible_host'] }} {{ item }}"
   with_items: "{{ groups['all'] | difference(['localhost']) }}"
+
+# TODO (feat): Parallelise this ssh-keyscan step
+- name: Collect the host keys using ssh-keyscan
+  ansible.builtin.command: "ssh-keyscan {{ hostvars[item]['ansible_host'] }}"
+  register: host_keys_result
+  with_items: "{{ groups['bacalhau_node'] }}"
+  changed_when: false
+
+- name: Add the host keys to the known_hosts file
+  ansible.builtin.known_hosts:
+    name: "{{ hostvars[item]['ansible_host'] }}"
+    key: "{{ host_keys_result.results | map(attribute='stdout') | join('\n') }}"
+    path: "{{ lookup('env', 'HOME') }}/.ssh/known_hosts"
+    state: present
+  with_items: "{{ groups['bacalhau_node'] }}"

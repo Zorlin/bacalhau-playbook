@@ -2,3 +2,5 @@
 collections:
   - name: community.general
   - name: community.digitalocean
+roles:
+  - geerlingguy.docker
